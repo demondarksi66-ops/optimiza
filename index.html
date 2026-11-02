@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUXILIO BY @SIOUX.SENSI</title>
+    
+    <!-- Configuración PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ef4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SioxSensi">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Canvas para el fondo de átomos/partículas */
+        #particles-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Banner de Notificación estilo Atajos de iOS */
+        #ios-shortcut-toast {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            z-index: 999;
+            width: 90%;
+            max-width: 350px;
+            background: rgba(30, 30, 32, 0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        #ios-shortcut-toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .ios-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .ios-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: #ffffff;
+        }
+
+        .ios-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .ios-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .ios-desc {
+            font-size: 0.75rem;
+            color: #a1a1aa;
+        }
+
+        /* Contenedor transparente */
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 90%;
+            max-width: 380px;
+            height: 620px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #ef4444;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+
+        /* Gestor de pantallas */
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            padding: 28px 20px;
+            justify-content: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* PANTALLA LOGIN */
+        .login-title {
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background-color: rgba(20, 20, 22, 0.75);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: #ef4444;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.8rem;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: none;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        .btn-red {
+            width: 100%;
+            padding: 14px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-red:active {
+            background-color: #dc2626;
+        }
+
+        /* PANTALLA PANEL */
+        .panel-header {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 8px rgba(0,0,0,0.9);
+        }
+
+        /* Pestañas */
+        .tabs {
+            display: flex;
+            background-color: rgba(20, 20, 22, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 22px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #a1a1aa;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background-color: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Contenido de pestañas */
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 18px;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Checkboxes */
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+        }
+
+        .control-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #ef4444;
+            cursor: pointer;
+        }
+
+        /* Slider FOV */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #ef4444;
+            cursor: pointer;
+        }
+
+        /* Desplegable Select */
+        .select-box {
+            position: relative;
+            width: fit-content;
+        }
+
+        .select-box select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-color: rgba(20, 20, 22, 0.75);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            padding: 10px 32px 10px 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #ef4444;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .select-box option {
+            background-color: #18181b;
+            color: #ffffff;
+        }
+
+        .select-box::after {
+            content: "▼";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: #ef4444;
+            pointer-events: none;
+        }
+
+        /* Radio buttons */
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.9);
+        }
+
+        .radio-item input[type="radio"] {
+            accent-color: #ef4444;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Botón inferior */
+        .btn-inject {
+            margin-top: auto;
+            width: 100%;
+            padding: 14px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background-color 0.2s;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-inject:active {
+            background-color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Fondo de Átomos/Líneas -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Notificación estilo Atajo de iOS -->
+    <div id="ios-shortcut-toast">
+        <div class="ios-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+        </div>
+        <div class="ios-text">
+            <span class="ios-title">Atajos</span>
+            <span class="ios-desc" id="ios-toast-msg">Se inyectaron las funciones correctamente</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- PANTALLA 1: LOGIN -->
+        <div id="login-screen" class="screen active">
+            <div class="login-title">@SIOUX.SENSI</div>
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Usuario" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="Contraseña">
+            </div>
+            <div id="login-error" class="error-message">Usuario o contraseña incorrectos</div>
+            <button class="btn-red" onclick="validateLogin()">Ingresar</button>
+        </div>
+
+        <!-- PANTALLA 2: PANEL MAIN -->
+        <div id="panel-screen" class="screen">
+            <div class="panel-header">AUXILIO BY @SIOUX.SENSI</div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="setTab(event, 'aimbot')">Aimbot</div>
+                <div class="tab" onclick="setTab(event, 'config')">Config</div>
+                <div class="tab" onclick="setTab(event, 'info')">Info</div>
+            </div>
+
+            <div id="aimbot" class="tab-content active">
+                <label class="control-item">
+                    <input type="checkbox" checked> Activar Auxilio
+                </label>
+
+                <label class="control-item">
+                    <input type="checkbox" checked> Activar Fov
+                </label>
+
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Fov</span>
+                        <span id="fov-num">50</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="50" oninput="document.getElementById('fov-num').innerText = this.value">
+                </div>
+
+                <div class="select-box">
+                    <select id="target-select">
+                        <option value="Auxilio Head">Auxilio Head</option>
+                        <option value="Auxilio Cuello">Auxilio Cuello</option>
+                        <option value="Auxilio Peito">Auxilio Peito</option>
+                    </select>
+                </div>
+
+                <div class="radio-group">
+                    <label class="radio-item">
+                        <input type="radio" name="trig" checked> Al Disparar
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="trig"> Al Mirar
+                    </label>
+                </div>
+
+                <button class="btn-inject" onclick="showIosShortcutToast('Se inyectaron las funciones correctamente')">INYECTAR FUNCIONES EN EL JUEGO</button>
+            </div>
+
+            <div id="config" class="tab-content">
+                <label class="control-item">
+                    <input type="checkbox"> Optimizar Sensibilidad
+                </label>
+                <label class="control-item">
+                    <input type="checkbox" checked> Modo Pantalla Completa
+                </label>
+                <button class="btn-inject" onclick="showIosShortcutToast('Configuración guardada en el sistema')">GUARDAR CONFIGURACIÓN</button>
+            </div>
+
+            <div id="info" class="tab-content">
+                <p style="color: #d4d4d8; font-size: 0.85rem; line-height: 1.4; text-shadow: 0 0 5px #000;">
+                    Auxilio de mira y optimización diseñado con el fin de mejorar la respuesta táctil y la sensibilidad, 100% seguro y sin riesgo de baneo.
+                </p>
+                <p style="color: #ef4444; font-size: 0.85rem; font-weight: bold; margin-top: 10px;">
+                    Copyright: 8z'balboe
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Registro del Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => console.log('Service Worker registrado con éxito:', reg.scope))
+                    .catch((err) => console.log('Error al registrar el Service Worker:', err));
+            });
+        }
+
+        function validateLogin() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('login-error');
+
+            if (user === "Siox8z" && pass === "KEY-2026") {
+                errorMsg.style.display = "none";
+                document.getElementById('login-screen').classList.remove('active');
+                document.getElementById('panel-screen').classList.add('active');
+            } else {
+                errorMsg.style.display = "block";
+            }
+        }
+
+        function setTab(e, tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            e.currentTarget.classList.add('active');
+        }
+
+        function showIosShortcutToast(msg) {
+            const toast = document.getElementById('ios-shortcut-toast');
+            document.getElementById('ios-toast-msg').innerText = msg;
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2800);
+        }
+
+        /* Fondo de red de átomos / partículas */
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const particles = [];
+        const particleCount = 70;
+        const maxDistance = 130;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 1.2;
+                this.vy = (Math.random() - 0.5) * 1.2;
+                this.radius = 2.5;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#a1a1aa';
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxDistance) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(161, 161, 170, ${0.8 - dist / maxDistance})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
